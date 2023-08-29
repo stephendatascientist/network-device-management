@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/4.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
-
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
+    "drf_yasg",
     "apps.device_interaction",
 ]
 
@@ -120,13 +121,13 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Netconf
 NETCONF_HOST = os.environ.get("NETCONF_HOST", None)
-NETCONF_SSH_PORT = os.environ.get("NETCONF_SSH_PORT", None)
+NETCONF_SSH_PORT = os.environ.get("NETCONF_SSH_PORT", 22)
 NETCONF_PORT = os.environ.get("NETCONF_PORT", None)
 NETCONF_XR_BASH_PORT = os.environ.get("NETCONF_XR_BASH_PORT", None)
 NETCONF_GRPC_PORT = os.environ.get("NETCONF_GRPC_PORT", None)
 NETCONF_USERNAME = os.environ.get("NETCONF_USERNAME", None)
 NETCONF_PASSWORD = os.environ.get("NETCONF_PASSWORD", None)
-
+NETCONF_TIMEOUT = os.environ.get("NETCONF_TIMEOUT", 30)
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
