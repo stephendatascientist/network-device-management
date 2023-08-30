@@ -10,3 +10,7 @@ class LoopbackConfigSerializer(serializers.Serializer):
 class LoopbackDeleteSerializer(serializers.Serializer):
     device_name = serializers.CharField(max_length=100)
     loopback_id = serializers.IntegerField()
+
+
+class DryRunConfigSerializer(serializers.Serializer):
+    dry_run_mode = serializers.BooleanField()

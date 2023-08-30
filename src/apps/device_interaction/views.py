@@ -2,12 +2,12 @@ import xmltodict
 from django.conf import settings
 from drf_yasg.utils import swagger_auto_schema
 from ncclient import manager
-from netmiko import ConnectHandler
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .serializers import LoopbackConfigSerializer
+from .serializers import LoopbackConfigSerializer, DryRunConfigSerializer
+from .utils import CommonUtils, ConnectionUtils
 
 
 class ConfigureLoopbackView(APIView):
@@ -19,6 +19,13 @@ class ConfigureLoopbackView(APIView):
     def post(self, request, format=None):
         """
         Configure a loopback interface on a network device.
+
+        Args:
+            request (Request): The HTTP request object.
+            format (str): The format of the response (default is None).
+
+        Returns:
+            Response: The response containing the output of the configuration or error messages.
         """
         serializer = LoopbackConfigSerializer(data=request.data)
         if serializer.is_valid():
@@ -27,36 +34,16 @@ class ConfigureLoopbackView(APIView):
             subnet_mask = serializer.validated_data["subnet_mask"]
 
             # Device connection parameters
-            device = {
-                "device_type": "cisco_xr",
-                "ip": settings.NETCONF_HOST,
-                "username": settings.NETCONF_USERNAME,
-                "password": settings.NETCONF_PASSWORD,
-                "timeout": settings.NETCONF_TIMEOUT,
-            }
+            device = ConnectionUtils.get_netmiko_connection_params()
 
             # CLI commands to configure loopback interface
-            commands = [
-                f"interface Loopback{loopback_number}",
-                f"description Loopback interface {loopback_number}",
-                f"ipv4 address {ip_address} {subnet_mask}",
-                "commit",
-            ]
+            commands = CommonUtils.generate_loopback_commands(
+                loopback_number, ip_address, subnet_mask
+            )
 
-            try:
-                with ConnectHandler(**device) as net_connect:
-                    net_connect.enable()
-                    output = net_connect.send_config_set(commands)
-                    response_data = {
-                        "message": "Configuration applied successfully",
-                    }
-                    return Response(response_data, status=status.HTTP_202_ACCEPTED)
-            except Exception as e:
-                error_message = f"Configuration failed: {str(e)}"
-                return Response(
-                    {"error": error_message},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                )
+            # Execute commands
+            output = CommonUtils.execute_commands(device, commands)
+            return output
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -69,7 +56,15 @@ class DeleteLoopbackView(APIView):
     @swagger_auto_schema(tags=["loopback"])
     def delete(self, request, loopback_number, format=None):
         """
-        Delete a loopback interface from a network device.
+        Delete a loopback interface on a network device.
+
+        Args:
+            request (Request): The HTTP request object.
+            loopback_number (int): The number of the loopback interface to delete.
+            format (str): The format of the response (default is None).
+
+        Returns:
+            Response: The response containing the output of the deletion or error messages.
         """
         if not loopback_number:
             return Response(
@@ -77,36 +72,15 @@ class DeleteLoopbackView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Device connection parameters for Netmiko
-        device = {
-            "device_type": "cisco_xr",
-            "ip": settings.NETCONF_HOST,
-            "username": settings.NETCONF_USERNAME,
-            "password": settings.NETCONF_PASSWORD,
-            "timeout": settings.NETCONF_TIMEOUT,
-        }
+        # Device connection parameters
+        device = ConnectionUtils.get_netmiko_connection_params()
 
         # CLI commands to delete loopback interface
-        commands = [
-            f"configure terminal",
-            f"no interface Loopback{loopback_number}",
-            f"commit",
-            f"end",
-        ]
+        commands = CommonUtils.generate_deletion_commands(loopback_number)
 
-        try:
-            with ConnectHandler(**device) as net_connect:
-                net_connect.enable()
-                output = net_connect.send_config_set(commands)
-                response_data = {
-                    "message": f"Loopback{loopback_number} deleted successfully",
-                }
-                return Response(response_data, status=status.HTTP_202_ACCEPTED)
-        except Exception as e:
-            error_message = f"Configuration failed using Netmiko: {str(e)}"
-            return Response(
-                {"error": error_message}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+        # Execute commands
+        output = CommonUtils.execute_commands(device, commands)
+        return output
 
 
 class ListInterfaceView(APIView):
@@ -118,15 +92,16 @@ class ListInterfaceView(APIView):
     def get(self, request, format=None):
         """
         Retrieve interface configurations using NETCONF.
+
+        Args:
+            request (Request): The HTTP request object.
+            format (str): The format of the response (default is None).
+
+        Returns:
+            Response: The response containing the retrieved interface configurations or error messages.
         """
         # Device connection parameters
-        device = {
-            "host": settings.NETCONF_HOST,
-            "port": 830,
-            "username": settings.NETCONF_USERNAME,
-            "password": settings.NETCONF_PASSWORD,
-            "device_params": {"name": "iosxr"},
-        }
+        device = ConnectionUtils.get_ncclient_connection_params()
 
         # NETCONF filter to retrieve interface configurations
         netconf_filter = """
@@ -135,14 +110,47 @@ class ListInterfaceView(APIView):
         </filter>
         """
 
-        try:
-            with manager.connect(**device) as m:
-                result = m.get(netconf_filter)
-                data = xmltodict.parse(result.data_xml)
-                return Response(data, status=status.HTTP_200_OK)
-        except Exception as e:
-            error_message = f"Failed to retrieve interface configurations: {str(e)}"
-            return Response(
-                {"error": error_message},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+        if settings.DRY_RUN:
+            response_data = {
+                "filter": netconf_filter,
+            }
+            return Response(response_data, status=status.HTTP_200_OK)
+        else:
+            try:
+                with manager.connect(**device) as m:
+                    result = m.get(netconf_filter)
+                    data = xmltodict.parse(result.data_xml)
+                    return Response(data, status=status.HTTP_200_OK)
+            except Exception as e:
+                error_message = f"Failed to retrieve interface configurations: {str(e)}"
+                return Response(
+                    {"error": error_message},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+
+
+class DryRunConfigView(APIView):
+    """
+    API view to configure the 'dry run' mode using a boolean field.
+    """
+
+    @swagger_auto_schema(tags=["default"], request_body=DryRunConfigSerializer)
+    def post(self, request, format=None):
+        """
+        Configure the 'dry run' mode.
+
+        Args:
+            request (Request): The HTTP request object.
+            format (str): The format of the response (default is None).
+
+        Returns:
+            Response: The response indicating the success or failure of configuring the 'dry run' mode.
+        """
+        serializer = DryRunConfigSerializer(data=request.data)
+        if serializer.is_valid():
+            new_dry_run_mode = serializer.validated_data["dry_run_mode"]
+            settings.DRY_RUN = new_dry_run_mode
+            status_msg = "Dry run mode updated successfully."
+            return Response({"status": status_msg}, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

@@ -129,9 +129,15 @@ NETCONF_USERNAME = os.environ.get("NETCONF_USERNAME", None)
 NETCONF_PASSWORD = os.environ.get("NETCONF_PASSWORD", None)
 NETCONF_TIMEOUT = os.environ.get("NETCONF_TIMEOUT", 30)
 
+# Dry Run
+DRY_RUN = os.environ.get("DRY_RUN", False)
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.BasicAuthentication",
-        "rest_framework.authentication.SessionAuthentication",
+        # "rest_framework.authentication.BasicAuthentication",
+        # "rest_framework.authentication.SessionAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.AllowAny",
     ],
 }
