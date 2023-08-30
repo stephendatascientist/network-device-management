@@ -1,5 +1,7 @@
+import xmltodict
 from django.conf import settings
 from drf_yasg.utils import swagger_auto_schema
+from ncclient import manager
 from netmiko import ConnectHandler
 from rest_framework import status
 from rest_framework.response import Response
@@ -104,4 +106,43 @@ class DeleteLoopbackView(APIView):
             error_message = f"Configuration failed using Netmiko: {str(e)}"
             return Response(
                 {"error": error_message}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class ListInterfaceView(APIView):
+    """
+    API view for retrieving interface configurations using NETCONF.
+    """
+
+    @swagger_auto_schema(tags=["loopback"])
+    def get(self, request, format=None):
+        """
+        Retrieve interface configurations using NETCONF.
+        """
+        # Device connection parameters
+        device = {
+            "host": settings.NETCONF_HOST,
+            "port": 830,
+            "username": settings.NETCONF_USERNAME,
+            "password": settings.NETCONF_PASSWORD,
+            "device_params": {"name": "iosxr"},
+        }
+
+        # NETCONF filter to retrieve interface configurations
+        netconf_filter = """
+        <filter>
+            <interface-configurations xmlns="http://cisco.com/ns/yang/Cisco-IOS-XR-ifmgr-cfg"/>
+        </filter>
+        """
+
+        try:
+            with manager.connect(**device) as m:
+                result = m.get(netconf_filter)
+                data = xmltodict.parse(result.data_xml)
+                return Response(data, status=status.HTTP_200_OK)
+        except Exception as e:
+            error_message = f"Failed to retrieve interface configurations: {str(e)}"
+            return Response(
+                {"error": error_message},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
