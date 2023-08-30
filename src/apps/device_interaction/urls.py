@@ -1,8 +1,14 @@
 from django.urls import path
 
-from .views import ConfigureLoopbackView, DeleteLoopbackView, ListInterfaceView
+from .views import (
+    ConfigureLoopbackView,
+    DeleteLoopbackView,
+    ListInterfaceView,
+    DryRunConfigView,
+)
 
 urlpatterns = [
+    path("configure-dry-run/", DryRunConfigView.as_view(), name="configure-dry-run"),
     path("interfaces/", ListInterfaceView.as_view(), name="list-interfaces"),
     path(
         "configure-loopback/",
