@@ -1,0 +1,29 @@
+version: '3'
+services:
+  web:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - ./src:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DJANGO_SETTINGS_MODULE=settings.development
+      - NETCONF_HOST=sandbox-iosxr-1.cisco.com
+      - NETCONF_SSH_PORT=22
+      - NETCONF_PORT=830
+      - NETCONF_XR_BASH_PORT=57722
+      - NETCONF_GRPC_PORT=57777
+      - NETCONF_USERNAME=admin
+      - NETCONF_PASSWORD=C1sco12345
+      - NETCONF_TIMEOUT=30
+      - DRY_RUN=False
+
+
+  nginx:
+    image: nginx:latest
+    volumes:
+      - ./deployment/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./deployment/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "80:80"
