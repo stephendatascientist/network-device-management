@@ -16,9 +16,10 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
+from django.http import JsonResponse
 from drf_yasg import openapi
 from drf_yasg.views import get_schema_view
-from rest_framework import permissions
+from rest_framework import permissions, status
 
 schema_view = get_schema_view(
     openapi.Info(
@@ -37,6 +38,13 @@ schema_view = get_schema_view(
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path(
+        "",
+        lambda request: JsonResponse(
+            {"message": "success"}, safe=False, status=status.HTTP_200_OK
+        ),
+        name="health-check",
+    ),
     path("device/", include("apps.device_interaction.urls")),
     path(
         "swagger<format>/", schema_view.without_ui(cache_timeout=0), name="schema-json"
