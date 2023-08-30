@@ -3,6 +3,7 @@ attrs==23.1.0
 bcrypt==4.0.1
 cffi==1.15.1
 cfgv==3.4.0
+coverage==7.3.0
 cryptography==41.0.3
 distlib==0.3.7
 Django==4.2
@@ -45,3 +46,4 @@ tomli==2.0.1
 typing_extensions==4.7.1
 uritemplate==4.1.1
 virtualenv==20.24.3
+xmltodict==0.13.0
