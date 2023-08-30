@@ -3,7 +3,7 @@ name: Test Coverage Check
 on:
   push:
     branches:
-      - task-6
+      - main
 
 jobs:
   test-coverage:
