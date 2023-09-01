@@ -131,7 +131,7 @@ class DryRunConfigTestCase(TestCase):
         mock_serializer.return_value.is_valid.return_value = True
         mock_serializer.return_value.validated_data = {"dry_run_mode": True}
 
-        request = self.factory.post("/dry-run-config/", self.valid_payload)
+        request = self.factory.put("/dry-run-config/", self.valid_payload)
         response = DryRunConfigView.as_view()(request)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -144,7 +144,7 @@ class DryRunConfigTestCase(TestCase):
         mock_serializer.return_value.is_valid.return_value = False
         mock_serializer.return_value.errors = {"error": "Invalid data"}
 
-        request = self.factory.post("/dry-run-config/", self.valid_payload)
+        request = self.factory.put("/dry-run-config/", self.valid_payload)
         response = DryRunConfigView.as_view()(request)
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
