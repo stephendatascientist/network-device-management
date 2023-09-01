@@ -135,7 +135,7 @@ class DryRunConfigView(APIView):
     """
 
     @swagger_auto_schema(tags=["default"], request_body=DryRunConfigSerializer)
-    def post(self, request, format=None):
+    def put(self, request, format=None):
         """
         Configure the 'dry run' mode.
 
